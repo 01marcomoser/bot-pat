@@ -1,6 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy Node.js app to Azure Web App - nerone-site
 
 on:
@@ -12,7 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -26,8 +22,6 @@ jobs:
           npm install
           npm run build --if-present
 
-      # QUESTO E' IL PASSAGGIO CHIAVE CHE MANCAVA:
-      # Crea un pacchetto pulito per il deploy senza node_modules
       - name: Prepare package for deployment
         run: |
           mkdir release
@@ -35,7 +29,6 @@ jobs:
           cp -r public release/public
           cp next.config.mjs package.json package-lock.json release/
 
-      # Carica solo la cartella 'release' come artefatto
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
@@ -48,6 +41,11 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    # Permessi necessari per il login OIDC
+    permissions:
+      id-token: write 
+      contents: read
 
     steps:
       - name: Download artifact from build job
@@ -55,7 +53,15 @@ jobs:
         with:
           name: node-app
 
-      # Azure ora riceve il pacchetto pulito e installerà i node_modules da solo
+      # Reinserito il blocco di login che avevo erroneamente rimosso
+      - name: 'Login to Azure'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      # Lo step di deploy ora usa il login e non più il publish-profile
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
@@ -63,4 +69,3 @@ jobs:
           app-name: 'nerone-site'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_68F15E8C908C4E18B37252D87E172830 }}
