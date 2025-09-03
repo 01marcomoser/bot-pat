@@ -54,12 +54,13 @@ jobs:
         with:
           name: node-app
 
-      # Step 3: Il deploy ora usa un pacchetto pulito. Azure installerà i node_modules.
+      # Step 3: Il deploy usa un pacchetto pulito. Azure installerà i node_modules.
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'nerone-site'
+          # --- OCCHIO QUI: IL NOME E' CORRETTO ---
+          app-name: 'nerono-site'
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B5A60F96953F4F6B97C678617218C6C3 }}
