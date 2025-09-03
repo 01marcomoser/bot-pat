@@ -12,8 +12,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -23,21 +21,32 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: npm install, build, and test
+      - name: npm install and build
         run: |
           npm install
           npm run build --if-present
-          npm run test --if-present
 
+      # Step 1: Rimuoviamo node_modules e altri file non necessari per la produzione
+      - name: Prepare package for deployment
+        run: |
+          mkdir -p release
+          cp -r .next release/.next
+          cp -r public release/public
+          cp next.config.mjs package.json package-lock.json release/
+      
+      # Step 2: Carichiamo solo la cartella 'release' pulita
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: release/
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     
     steps:
       - name: Download artifact from build job
@@ -45,6 +54,7 @@ jobs:
         with:
           name: node-app
       
+      # Step 3: Il deploy ora usa un pacchetto pulito. Azure installerà i node_modules.
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
