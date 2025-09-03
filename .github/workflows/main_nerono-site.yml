@@ -1,7 +1,6 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-
 name: Build and deploy Node.js app to Azure Web App - nerono-site
 
 on:
@@ -30,11 +29,11 @@ jobs:
       # Step 1: Rimuoviamo node_modules e altri file non necessari per la produzione
       - name: Prepare package for deployment
         run: |
-          mkdir -p release
+          mkdir release
           cp -r .next release/.next
           cp -r public release/public
           cp next.config.mjs package.json package-lock.json release/
-      
+
       # Step 2: Carichiamo solo la cartella 'release' pulita
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -48,20 +47,19 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+
       # Step 3: Il deploy ora usa un pacchetto pulito. Azure installerà i node_modules.
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'nerono-site'
+          app-name: 'nerone-site'
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B5A60F96953F4F6B97C678617218C6C3 }}
-
