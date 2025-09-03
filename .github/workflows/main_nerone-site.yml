@@ -10,7 +10,7 @@ env:
   AZURE_WEBAPP_NAME: 'nerone-site'
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     environment: production
     
@@ -22,17 +22,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Next.js app
-        run: npm run build
+      - name: Create deployment package
+        run: |
+          # Crea una cartella per il deploy senza node_modules
+          mkdir deploy
+          
+          # Copia tutti i file del progetto tranne node_modules
+          rsync -av --exclude=node_modules --exclude=.git --exclude=.next . deploy/
+          
+          # Assicurati che i file essenziali ci siano
+          ls -la deploy/
+          echo "=== PACKAGE.JSON CONTENT ==="
+          cat deploy/package.json
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -41,9 +42,19 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Configure Azure Web App for build
+        run: |
+          az webapp config appsettings set \
+            --resource-group "NeroneBot" \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --settings \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+              ENABLE_ORYX_BUILD=true \
+              NODE_VERSION="${{ env.NODE_VERSION }}"
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'production'
-          package: '.'
+          package: './deploy'
