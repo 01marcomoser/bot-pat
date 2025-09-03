@@ -38,9 +38,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     
     # Permessi necessari per il login OIDC
     permissions:
@@ -69,3 +66,4 @@ jobs:
           app-name: 'nerone-site'
           slot-name: 'Production'
           package: .
+
