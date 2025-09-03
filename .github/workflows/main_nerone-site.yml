@@ -24,16 +24,37 @@ jobs:
 
       - name: Create deployment package
         run: |
-          # Crea una cartella per il deploy senza node_modules
           mkdir deploy
           
-          # Copia tutti i file del progetto tranne node_modules
-          rsync -av --exclude=node_modules --exclude=.git --exclude=.next . deploy/
+          # Copia tutti i file sorgente
+          cp -r . deploy/
           
-          # Assicurati che i file essenziali ci siano
-          ls -la deploy/
-          echo "=== PACKAGE.JSON CONTENT ==="
-          cat deploy/package.json
+          # Rimuovi file non necessari
+          rm -rf deploy/.git
+          rm -rf deploy/node_modules
+          rm -rf deploy/.next
+          
+          # Crea script di build personalizzato
+          cat > deploy/build.sh << 'EOF'
+          #!/bin/bash
+          echo "=== STARTING CUSTOM BUILD SCRIPT ==="
+          
+          # Installa dipendenze con npm ci (più veloce e sicuro)
+          echo "Installing dependencies..."
+          npm ci --production=false
+          
+          # Verifica che Next.js sia installato
+          echo "Checking Next.js installation..."
+          ls -la node_modules/.bin/next || echo "Next.js binary not found!"
+          
+          # Build dell'applicazione
+          echo "Building application..."
+          npm run build
+          
+          echo "=== BUILD SCRIPT COMPLETED ==="
+          EOF
+          
+          chmod +x deploy/build.sh
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -42,15 +63,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Configure Azure Web App for build
+      - name: Configure Azure for custom build
         run: |
           az webapp config appsettings set \
             --resource-group "NeroneBot" \
             --name "${{ env.AZURE_WEBAPP_NAME }}" \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-              ENABLE_ORYX_BUILD=true \
-              NODE_VERSION="${{ env.NODE_VERSION }}"
+              PRE_BUILD_SCRIPT_PATH=build.sh \
+              NODE_VERSION="${{ env.NODE_VERSION }}" \
+              NPM_CONFIG_PRODUCTION=false
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
